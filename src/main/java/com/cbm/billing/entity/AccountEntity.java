@@ -1,6 +1,6 @@
 package com.cbm.billing.entity;
 
-import com.cbm.billing.commons.AccountStatus;
+import com.cbm.billing.common.AccountStatus;
 import jakarta.persistence.*;
 import lombok.*;
 

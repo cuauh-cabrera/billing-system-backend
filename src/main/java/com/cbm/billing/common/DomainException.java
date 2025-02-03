@@ -1,4 +1,4 @@
-package com.cbm.billing.exception;
+package com.cbm.billing.common;
 
 public class DomainException extends RuntimeException {
     public DomainException(String message) {

@@ -1,4 +1,4 @@
-package com.cbm.billing.commons;
+package com.cbm.billing.common;
 
 public enum BillStatus {
     SETTLED, NOT_SETTLED
