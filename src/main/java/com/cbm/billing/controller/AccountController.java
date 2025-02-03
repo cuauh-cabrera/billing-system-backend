@@ -2,6 +2,9 @@ package com.cbm.billing.controller;
 
 import com.cbm.billing.dto.create.CreateAccountDTO;
 import com.cbm.billing.dto.create.CreateAccountResponse;
+import com.cbm.billing.dto.update.UpdateBillCycleDTO;
+import com.cbm.billing.dto.update.UpdateBillCycleResponse;
+import com.cbm.billing.exception.AccountNotFoundException;
 import com.cbm.billing.service.IAccountService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -16,7 +19,6 @@ public class AccountController {
     public AccountController(IAccountService accountService) {
         this.accountService = accountService;
     }
-
     /**
      * Create a new account with the given {@link CreateAccountDTO}.
      *
@@ -28,5 +30,22 @@ public class AccountController {
     public ResponseEntity<CreateAccountResponse> create(@RequestBody @Valid CreateAccountDTO createAccountDTO) {
         CreateAccountResponse createAccountResponse = accountService.createAccount(createAccountDTO);
         return ResponseEntity.ok(createAccountResponse);
+    }
+    /**
+     * Updates the bill cycle for the account with the given ID using the provided
+     * {@link UpdateBillCycleDTO}.
+     *
+     * @param accountId the ID of the account to update
+     * @param updateBillCycleDTO the data for the updated account
+     * @return a {@link ResponseEntity} containing the updated account, or an error
+     *     response if the account could not be updated
+     *     @throws AccountNotFoundException if the account with the given ID does not exist
+     */
+    @PutMapping("/update/{accountId}")
+    public ResponseEntity<UpdateBillCycleResponse> updateBillCycle(@PathVariable Long accountId,
+                                                                   @RequestBody @Valid UpdateBillCycleDTO updateBillCycleDTO) throws AccountNotFoundException {
+
+        UpdateBillCycleResponse updateBillCycleResponse = accountService.updateBillCycle(accountId, updateBillCycleDTO);
+        return ResponseEntity.ok(updateBillCycleResponse);
     }
 }

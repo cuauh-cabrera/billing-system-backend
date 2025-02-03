@@ -1,6 +1,6 @@
 package com.cbm.billing.entity;
 
-import com.cbm.billing.commons.BillStatus;
+import com.cbm.billing.common.BillStatus;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;

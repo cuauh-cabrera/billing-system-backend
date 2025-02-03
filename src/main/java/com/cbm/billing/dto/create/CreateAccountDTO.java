@@ -1,7 +1,7 @@
 package com.cbm.billing.dto.create;
 
 
-import com.cbm.billing.commons.AccountStatus;
+import com.cbm.billing.common.AccountStatus;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
