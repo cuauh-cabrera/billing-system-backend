@@ -1,13 +1,18 @@
 package com.cbm.billing.service.impl;
 
 import com.cbm.billing.common.AccountStatus;
+import com.cbm.billing.common.TransactionType;
 import com.cbm.billing.dto.create.CreateAccountDTO;
 import com.cbm.billing.dto.create.CreateAccountResponse;
+import com.cbm.billing.dto.event.TransactionDetailsEvent;
 import com.cbm.billing.dto.update.UpdateBillCycleDTO;
 import com.cbm.billing.dto.update.UpdateBillCycleResponse;
+import com.cbm.billing.dto.update.WithdrawAccountDTO;
+import com.cbm.billing.dto.update.WithdrawAccountResponse;
 import com.cbm.billing.entity.AccountEntity;
 import com.cbm.billing.exception.AccountDomainException;
 import com.cbm.billing.exception.AccountNotFoundException;
+import com.cbm.billing.exception.ForbiddenTransactionExeption;
 import com.cbm.billing.mapper.IAccountDataMapper;
 import com.cbm.billing.repository.AccountRepository;
 import com.cbm.billing.service.IAccountService;
@@ -15,6 +20,7 @@ import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.Optional;
 
 @Service
@@ -45,13 +51,12 @@ public class AccountServiceImpl implements IAccountService {
     }
 
     /**
-     * Updates the bill cycle day for the account with the given id using the provided {@link UpdateBillCycleDTO}.
+     * function to update the bill cycle day for the account with the given id using the provided {@link UpdateBillCycleDTO}.
      *
      * @param accountId the id of the account to update
      * @param updateBillCycleDTO the data for the updated account
      * @return a {@link UpdateBillCycleResponse} containing the updated account, or an error
      *     response if the account could not be updated
-     * @throws AccountNotFoundException if no account is found with the given id
      */
     @Override
     @Transactional
@@ -82,6 +87,58 @@ public class AccountServiceImpl implements IAccountService {
         } catch (Exception e) {
             log.error("Bill cycle update failed");
             throw new AccountDomainException("Bill cycle update failed");
+        }
+    }
+
+    /**
+     * function to w the given amount from the account with the given id.
+     *
+     * @param accountId the id of the account to withdraw from
+     * @param amount the amount to withdraw
+     * @return a {@link WithdrawAccountResponse} containing the updated account, or an error
+     *     response if the account could not be updated
+     */
+    @Override
+    @Transactional
+    public WithdrawAccountResponse withdrawOnAccount(Long accountId, WithdrawAccountDTO amount) throws AccountNotFoundException, ForbiddenTransactionExeption {
+        log.info("Searching for account with id {}", accountId);
+
+        Optional<AccountEntity> accountOptional = accountRepository.findById(accountId);
+
+        if (accountOptional.isEmpty() || accountOptional.get().getStatus() == AccountStatus.TERMINATED) {
+            log.error("Account not found with id {}", accountId);
+            throw new AccountNotFoundException("Account not found with id " + accountId);
+        }
+
+        if (accountOptional.get().getCurrentBalance() < amount.getAmount()) {
+            log.error("Current balance is less than amount to withdraw");
+            throw new ForbiddenTransactionExeption("Current balance is less than amount to withdraw");
+        }
+
+        try {
+            AccountEntity accountEntity = accountOptional.get();
+            accountEntity.setCurrentBalance(accountEntity.getCurrentBalance() - amount.getAmount());
+            accountRepository.save(accountEntity);
+            log.info("Account with id {} updated successfully", accountEntity.getId());
+
+            TransactionDetailsEvent transactionDetailsEvent = TransactionDetailsEvent.builder()
+                    .accountId(accountEntity.getId())
+                    .transactionType(TransactionType.WITHDRAW)
+                    .previousBalance(accountEntity.getCurrentBalance() + amount.getAmount())
+                    .transactionAmount(amount.getAmount())
+                    .currentBalance(accountEntity.getCurrentBalance())
+                    .transactionDate(LocalDate.now())
+                    .build();
+
+            return WithdrawAccountResponse.builder()
+                    .code(200L)
+                    .message("Withdrawal successful")
+                    .details(transactionDetailsEvent)
+                    .build();
+
+        } catch (Exception e) {
+            log.error("Withdrawal failed for account with id {}", accountId);
+            throw new AccountDomainException("Withdrawal failed for account with id " + accountId);
         }
     }
 }
