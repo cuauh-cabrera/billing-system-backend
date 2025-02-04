@@ -7,8 +7,8 @@ import com.cbm.billing.dto.create.CreateAccountResponse;
 import com.cbm.billing.dto.event.TransactionDetailsEvent;
 import com.cbm.billing.dto.update.UpdateBillCycleDTO;
 import com.cbm.billing.dto.update.UpdateBillCycleResponse;
-import com.cbm.billing.dto.update.WithdrawAccountDTO;
-import com.cbm.billing.dto.update.WithdrawAccountResponse;
+import com.cbm.billing.dto.update.TransactionAmountDTO;
+import com.cbm.billing.dto.update.TransactionResponse;
 import com.cbm.billing.entity.AccountEntity;
 import com.cbm.billing.exception.AccountDomainException;
 import com.cbm.billing.exception.AccountNotFoundException;
@@ -91,16 +91,16 @@ public class AccountServiceImpl implements IAccountService {
     }
 
     /**
-     * function to w the given amount from the account with the given id.
+     * function to charge the given amount from the account with the given id.
      *
      * @param accountId the id of the account to withdraw from
      * @param amount the amount to withdraw
-     * @return a {@link WithdrawAccountResponse} containing the updated account, or an error
+     * @return a {@link TransactionResponse} containing the updated account, or an error
      *     response if the account could not be updated
      */
     @Override
     @Transactional
-    public WithdrawAccountResponse withdrawOnAccount(Long accountId, WithdrawAccountDTO amount) throws AccountNotFoundException, ForbiddenTransactionExeption {
+    public TransactionResponse chargeOnAccount(Long accountId, TransactionAmountDTO amount) throws AccountNotFoundException, ForbiddenTransactionExeption {
         log.info("Searching for account with id {}", accountId);
 
         Optional<AccountEntity> accountOptional = accountRepository.findById(accountId);
@@ -111,8 +111,8 @@ public class AccountServiceImpl implements IAccountService {
         }
 
         if (accountOptional.get().getCurrentBalance() < amount.getAmount()) {
-            log.error("Current balance is less than amount to withdraw");
-            throw new ForbiddenTransactionExeption("Current balance is less than amount to withdraw");
+            log.error("Current balance is less than amount to charge");
+            throw new ForbiddenTransactionExeption("Current balance is less than amount to charge");
         }
 
         try {
@@ -123,22 +123,71 @@ public class AccountServiceImpl implements IAccountService {
 
             TransactionDetailsEvent transactionDetailsEvent = TransactionDetailsEvent.builder()
                     .accountId(accountEntity.getId())
-                    .transactionType(TransactionType.WITHDRAW)
+                    .transactionType(TransactionType.CHARGE)
                     .previousBalance(accountEntity.getCurrentBalance() + amount.getAmount())
                     .transactionAmount(amount.getAmount())
                     .currentBalance(accountEntity.getCurrentBalance())
                     .transactionDate(LocalDate.now())
                     .build();
 
-            return WithdrawAccountResponse.builder()
+            return TransactionResponse.builder()
                     .code(200L)
-                    .message("Withdrawal successful")
+                    .message("Charge successful")
                     .details(transactionDetailsEvent)
                     .build();
 
         } catch (Exception e) {
-            log.error("Withdrawal failed for account with id {}", accountId);
-            throw new AccountDomainException("Withdrawal failed for account with id " + accountId);
+            log.error("Charge failed for account with id {}", accountId);
+            throw new AccountDomainException("Charge failed for account with id " + accountId);
+        }
+    }
+
+    /**
+     * function to credit the given amount to the account with the given id.
+     *
+     * @param accountId the id of the account to credit
+     * @param amount the amount to credit
+     * @return a {@link TransactionResponse} containing the updated account, or an error
+     *     response if the account could not be updated
+     * @throws AccountNotFoundException if the account with the given id does not exist
+     * @throws ForbiddenTransactionExeption if the account is terminated
+     */
+    @Override
+    @Transactional
+    public TransactionResponse creditOnAccount(Long accountId, TransactionAmountDTO amount) throws AccountNotFoundException, ForbiddenTransactionExeption {
+        log.info("Searching for account with id {}", accountId);
+
+        Optional<AccountEntity> accountOptional = accountRepository.findById(accountId);
+
+        if (accountOptional.isEmpty() || accountOptional.get().getStatus() == AccountStatus.TERMINATED) {
+            log.error("Account not found with id {}", accountId);
+            throw new AccountNotFoundException("Account not found with id " + accountId);
+        }
+
+        try {
+            AccountEntity accountEntity = accountOptional.get();
+            accountEntity.setCurrentBalance(accountEntity.getCurrentBalance() + amount.getAmount());
+            accountRepository.save(accountEntity);
+            log.info("Account with id {} updated successfully", accountEntity.getId());
+
+            TransactionDetailsEvent transactionDetailsEvent = TransactionDetailsEvent.builder()
+                    .accountId(accountEntity.getId())
+                    .transactionType(TransactionType.CREDIT)
+                    .previousBalance(accountEntity.getCurrentBalance() - amount.getAmount())
+                    .transactionAmount(amount.getAmount())
+                    .currentBalance(accountEntity.getCurrentBalance())
+                    .transactionDate(LocalDate.now())
+                    .build();
+
+            return TransactionResponse.builder()
+                    .code(200L)
+                    .message("Credit successful")
+                    .details(transactionDetailsEvent)
+                    .build();
+
+        } catch (Exception e) {
+            log.error("Credit failed for account with id {}", accountId);
+            throw new AccountDomainException("Credit failed for account with id " + accountId);
         }
     }
 }

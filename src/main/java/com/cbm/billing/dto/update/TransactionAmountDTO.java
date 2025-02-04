@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
-public class WithdrawAccountDTO {
+public class TransactionAmountDTO {
 
     @Min(value = 0, message = "Amount should be greater than 0")
     @NotNull(message = "Amount should not be null")
