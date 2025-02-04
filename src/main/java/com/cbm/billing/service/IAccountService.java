@@ -4,8 +4,8 @@ import com.cbm.billing.dto.create.CreateAccountDTO;
 import com.cbm.billing.dto.create.CreateAccountResponse;
 import com.cbm.billing.dto.update.UpdateBillCycleDTO;
 import com.cbm.billing.dto.update.UpdateBillCycleResponse;
-import com.cbm.billing.dto.update.WithdrawAccountDTO;
-import com.cbm.billing.dto.update.WithdrawAccountResponse;
+import com.cbm.billing.dto.update.TransactionAmountDTO;
+import com.cbm.billing.dto.update.TransactionResponse;
 import com.cbm.billing.exception.AccountNotFoundException;
 import com.cbm.billing.exception.ForbiddenTransactionExeption;
 
@@ -14,5 +14,7 @@ public interface IAccountService {
 
     public UpdateBillCycleResponse updateBillCycle(Long accountId, UpdateBillCycleDTO updateBillCycleDTO) throws AccountNotFoundException;
 
-    public WithdrawAccountResponse withdrawOnAccount(Long accountId, WithdrawAccountDTO amount) throws AccountNotFoundException, ForbiddenTransactionExeption;
+    public TransactionResponse chargeOnAccount(Long accountId, TransactionAmountDTO amount) throws AccountNotFoundException, ForbiddenTransactionExeption;
+
+    public TransactionResponse creditOnAccount(Long accountId, TransactionAmountDTO amount) throws AccountNotFoundException, ForbiddenTransactionExeption;
 }

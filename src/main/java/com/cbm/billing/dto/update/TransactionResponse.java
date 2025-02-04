@@ -8,7 +8,7 @@ import lombok.*;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class WithdrawAccountResponse {
+public class TransactionResponse {
     private Long code;
     private String message;
     private TransactionDetailsEvent details;

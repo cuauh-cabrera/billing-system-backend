@@ -1,11 +1,12 @@
 package com.cbm.billing.controller;
 
+import com.cbm.billing.common.TransactionType;
 import com.cbm.billing.dto.create.CreateAccountDTO;
 import com.cbm.billing.dto.create.CreateAccountResponse;
+import com.cbm.billing.dto.update.TransactionAmountDTO;
+import com.cbm.billing.dto.update.TransactionResponse;
 import com.cbm.billing.dto.update.UpdateBillCycleDTO;
 import com.cbm.billing.dto.update.UpdateBillCycleResponse;
-import com.cbm.billing.dto.update.WithdrawAccountDTO;
-import com.cbm.billing.dto.update.WithdrawAccountResponse;
 import com.cbm.billing.exception.AccountNotFoundException;
 import com.cbm.billing.exception.ForbiddenTransactionExeption;
 import com.cbm.billing.service.IAccountService;
@@ -34,6 +35,7 @@ public class AccountController {
         CreateAccountResponse createAccountResponse = accountService.createAccount(createAccountDTO);
         return ResponseEntity.ok(createAccountResponse);
     }
+
     /**
      * Updates the bill cycle for the account with the given ID using the provided
      * {@link UpdateBillCycleDTO}.
@@ -52,22 +54,30 @@ public class AccountController {
         UpdateBillCycleResponse updateBillCycleResponse = accountService.updateBillCycle(accountId, updateBillCycleDTO);
         return ResponseEntity.ok(updateBillCycleResponse);
     }
+
     /**
-     * Withdraws the given amount from the account with the given ID.
+     * Performs a transaction on the given account.
      *
-     * @param accountId the ID of the account to withdraw from
-     * @param amount the amount to withdraw
-     * @return a {@link ResponseEntity} containing the updated account, or an error response if the account could not be
-     *     updated
+     * @param accountId the id of the account to perform the transaction on
+     * @param operation the type of transaction to perform. Should be either "charge" or "credit"
+     * @param amount the amount of the transaction
+     * @return a {@link ResponseEntity} containing the result of the transaction, or an error response if the
+     *     transaction could not be performed
      * @throws AccountNotFoundException if the account with the given ID does not exist
-     * @throws ForbiddenTransactionExeption if the account is terminated or the current balance is insufficient
+     * @throws ForbiddenTransactionExeption if the operation is "charge" and the account does not have enough balance
      */
-    @PutMapping("transactions/withdraw/{accountId}")
-    public ResponseEntity<WithdrawAccountResponse> withdrawOnAccount(@PathVariable Long accountId,
-                                                                     @RequestBody @Valid WithdrawAccountDTO amount)
+    @PutMapping("transactions/{accountId}")
+    public ResponseEntity<TransactionResponse> accountTransaction(@PathVariable Long accountId,
+                                                               @RequestParam String operation,
+                                                               @RequestBody @Valid TransactionAmountDTO amount)
             throws AccountNotFoundException, ForbiddenTransactionExeption {
 
-        WithdrawAccountResponse withdrawAccountResponse = accountService.withdrawOnAccount(accountId, amount);
-        return ResponseEntity.ok(withdrawAccountResponse);
+        if (operation.equals(TransactionType.CHARGE.name().toLowerCase())) {
+            TransactionResponse chargeAccountResponse = accountService.chargeOnAccount(accountId, amount);
+            return ResponseEntity.ok(chargeAccountResponse);
+        }
+
+        TransactionResponse creditAccountResponse = accountService.creditOnAccount(accountId, amount);
+        return ResponseEntity.ok(creditAccountResponse);
     }
 }
