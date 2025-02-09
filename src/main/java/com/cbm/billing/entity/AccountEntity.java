@@ -42,7 +42,7 @@ public class AccountEntity {
     @Column(name = "updated_at")
     private LocalDate updatedAt;
 
-    @OneToMany(mappedBy = "account",fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "accountId",fetch = FetchType.LAZY)
     private List<BillEntity> bills;
 
     @PrePersist
