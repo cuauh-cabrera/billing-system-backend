@@ -34,6 +34,12 @@ public class AccountServiceImpl implements IAccountService {
         this.accountDataMapper = accountDataMapper;
     }
 
+/**
+ * Creates a new account using the provided {@link CreateAccountDTO}.
+ * @param createAccountDTO the data for creating a new account
+ * @return a {@link CreateAccountResponse} indicating the result of the account creation
+ * @throws AccountDomainException if the account creation fails
+ */
     @Override
     @Transactional
     public CreateAccountResponse createAccount(CreateAccountDTO createAccountDTO) {
@@ -144,7 +150,6 @@ public class AccountServiceImpl implements IAccountService {
 
     /**
      * function to credit the given amount to the account with the given id.
-     *
      * @param accountId the id of the account to credit
      * @param amount the amount to credit
      * @return a {@link TransactionResponse} containing the updated account, or an error

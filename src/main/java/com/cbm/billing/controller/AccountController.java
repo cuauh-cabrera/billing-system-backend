@@ -25,7 +25,6 @@ public class AccountController {
     }
     /**
      * Create a new account with the given {@link CreateAccountDTO}.
-     *
      * @param createAccountDTO the data for the new account
      * @return a {@link ResponseEntity} containing the created account, or an error response if the account could not be
      *     created
@@ -37,9 +36,7 @@ public class AccountController {
     }
 
     /**
-     * Updates the bill cycle for the account with the given ID using the provided
-     * {@link UpdateBillCycleDTO}.
-     *
+     * Updates the bill cycle for the account with the given ID using the provided {@link UpdateBillCycleDTO}.
      * @param accountId the ID of the account to update
      * @param updateBillCycleDTO the data for the updated account
      * @return a {@link ResponseEntity} containing the updated account, or an error
@@ -57,7 +54,6 @@ public class AccountController {
 
     /**
      * Performs a transaction on the given account.
-     *
      * @param accountId the id of the account to perform the transaction on
      * @param operation the type of transaction to perform. Should be either "charge" or "credit"
      * @param amount the amount of the transaction
