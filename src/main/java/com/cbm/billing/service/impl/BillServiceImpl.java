@@ -6,11 +6,13 @@ import com.cbm.billing.dto.create.CreateBillEvent;
 import com.cbm.billing.dto.create.CreateBillResponse;
 import com.cbm.billing.entity.AccountEntity;
 import com.cbm.billing.entity.BillEntity;
+import com.cbm.billing.entity.BillSummaryEntity;
 import com.cbm.billing.exception.AccountNotFoundException;
 import com.cbm.billing.exception.BillDomainException;
 import com.cbm.billing.mapper.IBillDataMapper;
 import com.cbm.billing.repository.AccountRepository;
 import com.cbm.billing.repository.BillRepository;
+import com.cbm.billing.repository.BillSummaryRepository;
 import com.cbm.billing.service.IBillService;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
@@ -24,11 +26,13 @@ import java.util.Optional;
 public class BillServiceImpl implements IBillService {
     private final BillRepository billRepository;
     private final AccountRepository accountRepository;
+    private final BillSummaryRepository billSummaryRepository;
     private final IBillDataMapper billDataMapper;
 
-    public BillServiceImpl(BillRepository billRepository, AccountRepository accountRepository, IBillDataMapper billDataMapper) {
+    public BillServiceImpl(BillRepository billRepository, AccountRepository accountRepository, BillSummaryRepository billSummaryRepository, IBillDataMapper billDataMapper) {
         this.billRepository = billRepository;
         this.accountRepository = accountRepository;
+        this.billSummaryRepository = billSummaryRepository;
         this.billDataMapper = billDataMapper;
     }
 
@@ -65,6 +69,13 @@ public class BillServiceImpl implements IBillService {
             BillEntity billEntity = billDataMapper.CreateBillDTOInToBillEntity(createBillDTO);
             billRepository.save(billEntity);
             log.info("Bill created successfully for account with id {} and amount $ {}", createBillDTO.getAccountId(),billAmount);
+
+            // Propagate the new bill to the bill summary table
+            BillSummaryEntity billSummary = new BillSummaryEntity();
+            billSummary.setId(billEntity.getId());
+            billSummary.setStatus(billEntity.getStatus());
+            billSummaryRepository.save(billSummary);
+            log.info("Bill propagated to bill summary successfully for account with id {} and amount $ {}", createBillDTO.getAccountId(),billAmount);
 
             // Update the account current balance
             accountEntity.setCurrentBalance(accountCurrentBalance + billAmount);

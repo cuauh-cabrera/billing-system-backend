@@ -3,6 +3,7 @@ package com.cbm.billing.controller;
 import com.cbm.billing.common.TransactionType;
 import com.cbm.billing.dto.create.CreateAccountDTO;
 import com.cbm.billing.dto.create.CreateAccountResponse;
+import com.cbm.billing.dto.query.QueryAccountResponse;
 import com.cbm.billing.dto.update.TransactionAmountDTO;
 import com.cbm.billing.dto.update.TransactionResponse;
 import com.cbm.billing.dto.update.UpdateBillCycleDTO;
@@ -75,5 +76,11 @@ public class AccountController {
 
         TransactionResponse creditAccountResponse = accountService.creditOnAccount(accountId, amount);
         return ResponseEntity.ok(creditAccountResponse);
+    }
+
+    @GetMapping("{accountId}")
+    public ResponseEntity<QueryAccountResponse> findAccount(@PathVariable Long accountId) throws AccountNotFoundException {
+        QueryAccountResponse queryAccountResponse = accountService.findAccountById(accountId);
+        return ResponseEntity.ok(queryAccountResponse);
     }
 }

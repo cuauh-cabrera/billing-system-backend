@@ -5,10 +5,12 @@ import com.cbm.billing.common.TransactionType;
 import com.cbm.billing.dto.create.CreateAccountDTO;
 import com.cbm.billing.dto.create.CreateAccountResponse;
 import com.cbm.billing.dto.event.TransactionDetailsEvent;
-import com.cbm.billing.dto.update.UpdateBillCycleDTO;
-import com.cbm.billing.dto.update.UpdateBillCycleResponse;
+import com.cbm.billing.dto.model.AccountDTO;
+import com.cbm.billing.dto.query.QueryAccountResponse;
 import com.cbm.billing.dto.update.TransactionAmountDTO;
 import com.cbm.billing.dto.update.TransactionResponse;
+import com.cbm.billing.dto.update.UpdateBillCycleDTO;
+import com.cbm.billing.dto.update.UpdateBillCycleResponse;
 import com.cbm.billing.entity.AccountEntity;
 import com.cbm.billing.exception.AccountDomainException;
 import com.cbm.billing.exception.AccountNotFoundException;
@@ -21,6 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -44,7 +47,7 @@ public class AccountServiceImpl implements IAccountService {
     @Transactional
     public CreateAccountResponse createAccount(CreateAccountDTO createAccountDTO) {
         try {
-            AccountEntity accountEntity = accountDataMapper.CreateAccountDTOInToAccountEntity(createAccountDTO);
+            AccountEntity accountEntity = accountDataMapper.createAccountDTOInToAccountEntity(createAccountDTO);
             accountRepository.save(accountEntity);
             return CreateAccountResponse.builder()
                     .code(200L)
@@ -193,6 +196,34 @@ public class AccountServiceImpl implements IAccountService {
         } catch (Exception e) {
             log.error("Credit failed for account with id {}", accountId);
             throw new AccountDomainException("Credit failed for account with id " + accountId);
+        }
+    }
+
+    @Override
+    public QueryAccountResponse findAccountById(Long accountId) throws AccountNotFoundException {
+        log.info("Searching account with id {}", accountId);
+
+        Optional<AccountEntity> accountOptional = accountRepository.findById(accountId);
+
+        if (accountOptional.isEmpty() || accountOptional.get().getStatus() == AccountStatus.TERMINATED) {
+            log.error("Account not found with id {}", accountId);
+            throw new AccountNotFoundException("Account not found with id " + accountId);
+        }
+
+        try {
+            AccountEntity accountEntity = accountOptional.get();
+            AccountDTO accountDTO = accountDataMapper.accountEntityToAccountDTO(accountEntity);
+            log.info("Account found  with id {}", accountId);
+
+            return QueryAccountResponse.builder()
+                    .code(200L)
+                    .message("Account found")
+                    .accounts(List.of(accountDTO))
+                    .build();
+
+        } catch (Exception e) {
+            log.error("Error finding account with id {}", accountId);
+            throw new AccountDomainException("Error finding account with id " + accountId);
         }
     }
 }
