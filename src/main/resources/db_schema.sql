@@ -70,7 +70,13 @@ USE billing_summary;
 CREATE TABLE billing_account_summary (
     id BIGINT NOT NULL,  
     name VARCHAR(100) NOT NULL,
-    PRIMARY KEY (id)
+    current_balance DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    status ENUM('ACTIVE', 'TERMINATED') NOT NULL DEFAULT 'ACTIVE',
+    billId BIGINT NOT NULL,
+    PRIMARY KEY (id),
+    CONSTRAINT fk_billing_account_summary_bill_summary
+        FOREIGN KEY (billId)
+        REFERENCES bill_summary(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Billing Summary Table ---

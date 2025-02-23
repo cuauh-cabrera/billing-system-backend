@@ -1,8 +1,13 @@
 package com.cbm.billing.controller;
 
+import com.cbm.billing.common.AccountConstants;
+import com.cbm.billing.common.AccountStatus;
 import com.cbm.billing.common.TransactionType;
 import com.cbm.billing.dto.create.CreateAccountDTO;
 import com.cbm.billing.dto.create.CreateAccountResponse;
+import com.cbm.billing.dto.query.QueryAccountResponse;
+import com.cbm.billing.dto.query.SearchAccountDTO;
+import com.cbm.billing.dto.query.SearchAccountResponse;
 import com.cbm.billing.dto.update.TransactionAmountDTO;
 import com.cbm.billing.dto.update.TransactionResponse;
 import com.cbm.billing.dto.update.UpdateBillCycleDTO;
@@ -13,6 +18,8 @@ import com.cbm.billing.service.IAccountService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDate;
 
 @RestController
 @RequestMapping("/api/v1/accounts")
@@ -75,5 +82,55 @@ public class AccountController {
 
         TransactionResponse creditAccountResponse = accountService.creditOnAccount(accountId, amount);
         return ResponseEntity.ok(creditAccountResponse);
+    }
+
+    /**
+     * Retrieves an account by ID.
+     * @param accountId the ID of the account to retrieve
+     * @return a {@link ResponseEntity} containing the retrieved account, or an error
+     *     response if the account could not be found
+     * @throws AccountNotFoundException if the account with the given ID does not exist
+     */
+    @GetMapping("{accountId}")
+    public ResponseEntity<QueryAccountResponse> findAccount(@PathVariable Long accountId) throws AccountNotFoundException {
+        QueryAccountResponse queryAccountResponse = accountService.findAccountById(accountId);
+        return ResponseEntity.ok(queryAccountResponse);
+    }
+
+    /**
+     * Retrieves a list of accounts that match the given criteria.
+     * @param page the page number of the list to retrieve, starting from 0
+     * @param size the number of accounts to retrieve per page
+     * @param sort the field to sort the accounts by. Can be "name", "bill_cycle_day",
+     *     or "last_bill_date". The default is "name"
+     * @param bill_cicle the bill cycle day to filter by
+     * @param last_bill the last bill date to filter by
+     * @param status the status of the accounts to filter by
+     * @param name the name of the accounts to filter by
+     * @return a {@link ResponseEntity} containing the retrieved accounts, or an error
+     *     response if no accounts match the criteria
+     */
+    @GetMapping("/search")
+    public ResponseEntity<SearchAccountResponse> searchAccount(@RequestParam(defaultValue = AccountConstants.DEFAULT_PAGE, required = false) int page,
+                                                               @RequestParam(defaultValue = AccountConstants.PAGE_SIZE, required = false) int size,
+                                                               @RequestParam(required = false) String sort,
+                                                               @RequestParam(required = false) Integer bill_cicle,
+                                                               @RequestParam(required = false) LocalDate last_bill,
+                                                               @RequestParam(required = false) AccountStatus status,
+                                                               @RequestParam(required = false) String name) {
+
+        SearchAccountDTO searchAccountDTO = SearchAccountDTO.builder()
+                .page(page)
+                .size(size)
+                .sort(sort)
+                .billCycleDay(bill_cicle)
+                .lastBillDate(last_bill)
+                .status(status)
+                .name(name)
+                .build();
+
+        SearchAccountResponse searchAccountResponse = accountService.searchAccount(page, size, sort,searchAccountDTO);
+        return ResponseEntity.ok(searchAccountResponse);
+
     }
 }

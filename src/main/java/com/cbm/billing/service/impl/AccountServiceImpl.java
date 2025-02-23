@@ -5,22 +5,38 @@ import com.cbm.billing.common.TransactionType;
 import com.cbm.billing.dto.create.CreateAccountDTO;
 import com.cbm.billing.dto.create.CreateAccountResponse;
 import com.cbm.billing.dto.event.TransactionDetailsEvent;
-import com.cbm.billing.dto.update.UpdateBillCycleDTO;
-import com.cbm.billing.dto.update.UpdateBillCycleResponse;
+import com.cbm.billing.dto.query.QueryAccountResponse;
+import com.cbm.billing.dto.query.SearchAccountDTO;
+import com.cbm.billing.dto.query.SearchAccountResponse;
 import com.cbm.billing.dto.update.TransactionAmountDTO;
 import com.cbm.billing.dto.update.TransactionResponse;
+import com.cbm.billing.dto.update.UpdateBillCycleDTO;
+import com.cbm.billing.dto.update.UpdateBillCycleResponse;
 import com.cbm.billing.entity.AccountEntity;
 import com.cbm.billing.exception.AccountDomainException;
 import com.cbm.billing.exception.AccountNotFoundException;
 import com.cbm.billing.exception.ForbiddenTransactionExeption;
 import com.cbm.billing.mapper.IAccountDataMapper;
+import com.cbm.billing.model.Account;
 import com.cbm.billing.repository.AccountRepository;
 import com.cbm.billing.service.IAccountService;
+import io.micrometer.common.util.StringUtils;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.TypedQuery;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.CriteriaQuery;
+import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -28,10 +44,14 @@ import java.util.Optional;
 public class AccountServiceImpl implements IAccountService {
     private final AccountRepository accountRepository;
     private final IAccountDataMapper accountDataMapper;
+    private final EntityManager entityManager;
+    private final CriteriaBuilder criteriaBuilder;
 
-    public AccountServiceImpl(AccountRepository accountRepository, IAccountDataMapper accountDataMapper) {
+    public AccountServiceImpl(AccountRepository accountRepository, IAccountDataMapper accountDataMapper, EntityManager entityManager) {
         this.accountRepository = accountRepository;
         this.accountDataMapper = accountDataMapper;
+        this.entityManager = entityManager;
+        this.criteriaBuilder = entityManager.getCriteriaBuilder();
     }
 
 /**
@@ -44,7 +64,7 @@ public class AccountServiceImpl implements IAccountService {
     @Transactional
     public CreateAccountResponse createAccount(CreateAccountDTO createAccountDTO) {
         try {
-            AccountEntity accountEntity = accountDataMapper.CreateAccountDTOInToAccountEntity(createAccountDTO);
+            AccountEntity accountEntity = accountDataMapper.createAccountDTOInToAccountEntity(createAccountDTO);
             accountRepository.save(accountEntity);
             return CreateAccountResponse.builder()
                     .code(200L)
@@ -194,5 +214,118 @@ public class AccountServiceImpl implements IAccountService {
             log.error("Credit failed for account with id {}", accountId);
             throw new AccountDomainException("Credit failed for account with id " + accountId);
         }
+    }
+
+    /**
+     * Retrieves an account by ID.
+     * @param accountId the ID of the account to retrieve
+     * @return a {@link QueryAccountResponse} containing the retrieved account, or an error
+     *     response if the account could not be found
+     * @throws AccountNotFoundException if the account with the given ID does not exist
+     */
+    @Override
+    public QueryAccountResponse findAccountById(Long accountId) throws AccountNotFoundException {
+        log.info("Searching account with id {}", accountId);
+
+        Optional<AccountEntity> accountOptional = accountRepository.findById(accountId);
+
+        if (accountOptional.isEmpty() || accountOptional.get().getStatus() == AccountStatus.TERMINATED) {
+            log.error("Account not found with id {}", accountId);
+            throw new AccountNotFoundException("Account not found with id " + accountId);
+        }
+
+        try {
+            AccountEntity accountEntity = accountOptional.get();
+            Account accountDTO = accountDataMapper.accountEntityToAccount(accountEntity);
+            log.info("Account found  with id {}", accountId);
+
+            return QueryAccountResponse.builder()
+                    .code(200L)
+                    .message("Account found")
+                    .accounts(List.of(accountDTO))
+                    .build();
+
+        } catch (Exception e) {
+            log.error("Error finding account with id {}", accountId);
+            throw new AccountDomainException("Error finding account with id " + accountId);
+        }
+    }
+
+    /**
+     * Retrieves a list of accounts that match the given search filters.
+     * @param page the page of the search results to retrieve
+     * @param size the number of results to include in each page
+     * @param sort the field to sort the results by
+     * @param filters the search filters to apply
+     * @return a {@link SearchAccountResponse} containing the search results, or an error
+     *     response if the search could not be performed
+     * @throws AccountDomainException if the search could not be performed
+     */
+    @Override
+    public SearchAccountResponse searchAccount(int page, int size, String sort, SearchAccountDTO filters) {
+        log.info("Searching accounts");
+
+        try {
+            CriteriaQuery<AccountEntity> criteriaQuery = criteriaBuilder.createQuery(AccountEntity.class);
+            Root<AccountEntity> accountEntityRoot = criteriaQuery.from(AccountEntity.class);
+            Predicate predicate = searchAccountPredicate(accountDataMapper.searchAccountDTOToAccount(filters), accountEntityRoot);
+            log.info("Building predicate with filters: {}", predicate);
+
+            criteriaQuery.where(predicate);
+            TypedQuery<AccountEntity> typedQuery = entityManager.createQuery(criteriaQuery);
+            log.info("Executing query...");
+
+            Sort sortCriteria = Sort.by(Sort.Direction.ASC, "name");
+            Pageable pageable = PageRequest.of(page, size, sortCriteria);
+            typedQuery.setFirstResult(pageable.getPageNumber() * pageable.getPageSize());
+            typedQuery.setMaxResults(pageable.getPageSize());
+            long totalCount = entityManager.createQuery(criteriaQuery).getResultList().size();
+
+            List<AccountEntity> accountEntities = typedQuery.getResultList();
+            List<Account> accounts = accountEntities.stream()
+                    .map(accountDataMapper::accountEntityToAccount)
+                    .toList();
+
+            log.info("Accounts found: {}", totalCount);
+
+            return SearchAccountResponse.builder()
+                    .total(totalCount)
+                    .page(page)
+                    .size(size)
+                    .accounts(accounts)
+                    .build();
+
+        } catch (Exception e) {
+            log.error("Error searching accounts");
+            throw new AccountDomainException("Error searching accounts");
+        }
+    }
+
+    /**
+     * Auxiliary method that generates a JPA predicate from the given search filters.
+     * @param filters the search filters
+     * @param accountEntityRoot the root of the JPA query
+     * @return a JPA predicate that can be used to filter the results of the query
+     */
+    private Predicate searchAccountPredicate(Account filters, Root<AccountEntity> accountEntityRoot) {
+        List<Predicate> predicates = new ArrayList<>();
+
+        if (filters.getName() != null && StringUtils.isNotEmpty(filters.getName())) {
+            predicates.add(criteriaBuilder.like(accountEntityRoot.get("name"),"%" + filters.getName() + "%"));
+        }
+
+        if (filters.getStatus() != null && StringUtils.isNotEmpty(filters.getStatus().toString())) {
+            predicates.add(criteriaBuilder.equal(accountEntityRoot.get("status"), filters.getStatus()));
+        }
+
+        if (filters.getBillCycleDay() != null && StringUtils.isNotEmpty(filters.getBillCycleDay().toString())) {
+            predicates.add(criteriaBuilder.equal(accountEntityRoot.get("billCycleDay"), filters.getBillCycleDay()));
+        }
+
+        if (filters.getLastBillDate() != null && StringUtils.isNotEmpty(filters.getLastBillDate().toString())) {
+            predicates.add(criteriaBuilder.equal(accountEntityRoot.get("lastBillDate"), filters.getLastBillDate()));
+        }
+
+        return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
     }
 }
