@@ -8,10 +8,11 @@ import java.util.List;
 @Getter
 @Setter
 @Builder
-@NoArgsConstructor
 @AllArgsConstructor
-public class QueryAccountResponse {
-    private Long code;
-    private String message;
-    private List <Account> accounts;
+@NoArgsConstructor
+public class SearchAccountResponse {
+    private int page;
+    private int size;
+    private long total;
+    private List<Account> accounts;
 }

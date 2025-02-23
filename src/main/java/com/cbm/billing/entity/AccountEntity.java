@@ -12,7 +12,7 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(catalog = "billing", name = "billing_account")
+@Table(catalog = "billing", name = "billing_account", indexes = @Index(name = "idx_name", columnList = "name"))
 public class AccountEntity {
 
     @Id
@@ -27,7 +27,7 @@ public class AccountEntity {
     private Double currentBalance;
 
     @Column(name = "bill_cycle_day")
-    private int billCycleDay;
+    private Integer billCycleDay;
 
     @Column(name = "last_bill_date")
     private LocalDate lastBillDate;
