@@ -8,11 +8,9 @@ import com.cbm.billing.dto.create.CreateAccountResponse;
 import com.cbm.billing.dto.query.QueryAccountResponse;
 import com.cbm.billing.dto.query.SearchAccountDTO;
 import com.cbm.billing.dto.query.SearchAccountResponse;
-import com.cbm.billing.dto.update.TransactionAmountDTO;
-import com.cbm.billing.dto.update.TransactionResponse;
-import com.cbm.billing.dto.update.UpdateBillCycleDTO;
-import com.cbm.billing.dto.update.UpdateBillCycleResponse;
+import com.cbm.billing.dto.update.*;
 import com.cbm.billing.exception.AccountNotFoundException;
+import com.cbm.billing.exception.ForbiddenOperationException;
 import com.cbm.billing.exception.ForbiddenTransactionExeption;
 import com.cbm.billing.service.IAccountService;
 import jakarta.validation.Valid;
@@ -132,5 +130,22 @@ public class AccountController {
         SearchAccountResponse searchAccountResponse = accountService.searchAccount(page, size, sort,searchAccountDTO);
         return ResponseEntity.ok(searchAccountResponse);
 
+    }
+
+    /**
+     * Terminates the account with the given ID.
+     * @param accountId the ID of the account to terminate
+     * @param updateAccountStatusDTO the data for the terminated account
+     * @return a {@link ResponseEntity} containing the terminated account, or an error response if the account could not be terminated
+     * @throws AccountNotFoundException if the account with the given ID does not exist
+     * @throws ForbiddenOperationException if the account with the given ID is not active
+     */
+    @PutMapping("/inactivate/{accountId}")
+    public ResponseEntity<UpdateAccountStatusResponse> inactivateAccount(@PathVariable Long accountId,
+                                                                         @RequestBody @Valid UpdateAccountStatusDTO updateAccountStatusDTO)
+            throws AccountNotFoundException, ForbiddenOperationException {
+
+        UpdateAccountStatusResponse updateAccountStatusResponse = accountService.terminateAccount(accountId, updateAccountStatusDTO);
+        return ResponseEntity.ok(updateAccountStatusResponse);
     }
 }

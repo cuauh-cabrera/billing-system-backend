@@ -5,16 +5,15 @@ import com.cbm.billing.common.TransactionType;
 import com.cbm.billing.dto.create.CreateAccountDTO;
 import com.cbm.billing.dto.create.CreateAccountResponse;
 import com.cbm.billing.dto.event.TransactionDetailsEvent;
+import com.cbm.billing.dto.event.UpdateAccountStatusEvent;
 import com.cbm.billing.dto.query.QueryAccountResponse;
 import com.cbm.billing.dto.query.SearchAccountDTO;
 import com.cbm.billing.dto.query.SearchAccountResponse;
-import com.cbm.billing.dto.update.TransactionAmountDTO;
-import com.cbm.billing.dto.update.TransactionResponse;
-import com.cbm.billing.dto.update.UpdateBillCycleDTO;
-import com.cbm.billing.dto.update.UpdateBillCycleResponse;
+import com.cbm.billing.dto.update.*;
 import com.cbm.billing.entity.AccountEntity;
 import com.cbm.billing.exception.AccountDomainException;
 import com.cbm.billing.exception.AccountNotFoundException;
+import com.cbm.billing.exception.ForbiddenOperationException;
 import com.cbm.billing.exception.ForbiddenTransactionExeption;
 import com.cbm.billing.mapper.IAccountDataMapper;
 import com.cbm.billing.model.Account;
@@ -179,7 +178,7 @@ public class AccountServiceImpl implements IAccountService {
      */
     @Override
     @Transactional
-    public TransactionResponse creditOnAccount(Long accountId, TransactionAmountDTO amount) throws AccountNotFoundException, ForbiddenTransactionExeption {
+    public TransactionResponse creditOnAccount(Long accountId, TransactionAmountDTO amount) throws AccountNotFoundException {
         log.info("Searching for account with id {}", accountId);
 
         Optional<AccountEntity> accountOptional = accountRepository.findById(accountId);
@@ -298,6 +297,55 @@ public class AccountServiceImpl implements IAccountService {
         } catch (Exception e) {
             log.error("Error searching accounts");
             throw new AccountDomainException("Error searching accounts");
+        }
+    }
+
+    /**
+     * Update the status of an ACTIVE account with the given id to TERMINATE.
+     * @param accountId the id of the account to update (must be ACTIVE)
+     * @param updateAccountStatusDTO contains the new status (must be TERMINATED)
+     * @return a {@link UpdateAccountStatusResponse} containing the updated account, or an error response if the account could not be updated
+     * @throws AccountNotFoundException if the account with the given id does not exist
+     * @throws ForbiddenOperationException if the account is already TERMINATED
+     */
+    @Override
+    @Transactional
+    public UpdateAccountStatusResponse terminateAccount(Long accountId, UpdateAccountStatusDTO updateAccountStatusDTO) throws AccountNotFoundException, ForbiddenOperationException {
+        log.info("Updating account status with id {}", accountId);
+
+        Optional<AccountEntity> accountEntityOptional = accountRepository.findById(accountId);
+
+        if(accountEntityOptional.isEmpty()) {
+            log.error("Account not found with id {}", accountId);
+            throw new AccountNotFoundException("Account not found with id " + accountId);
+        }
+
+        if (accountEntityOptional.get().getStatus() == AccountStatus.TERMINATED) {
+            log.error("Account is already terminated with id {}", accountId);
+            throw new ForbiddenOperationException("Account with id " + accountId + " is already terminated. You cannot perform any modification on terminated accounts");
+        }
+
+        try {
+            AccountEntity accountEntity = accountEntityOptional.get();
+            accountEntity.setStatus(updateAccountStatusDTO.getStatus());
+            accountRepository.save(accountEntity);
+            log.info("Account with id {} updated successfully", accountEntity.getId());
+
+            UpdateAccountStatusEvent updateAccountStatusEvent = UpdateAccountStatusEvent.builder()
+                    .accountId(accountEntity.getId())
+                    .updatedStatus(accountEntity.getStatus())
+                    .updatedAt(LocalDate.now())
+                    .build();
+
+            return UpdateAccountStatusResponse.builder()
+                    .code(200L)
+                    .message("Account status updated successfully")
+                    .details(updateAccountStatusEvent)
+                    .build();
+
+        }catch (Exception e) {
+            log.error("Error updating account status with id {}", accountId);
+            throw new AccountDomainException("Error updating account status with id " + accountId);
         }
     }
 
