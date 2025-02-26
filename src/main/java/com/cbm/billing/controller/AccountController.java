@@ -13,6 +13,9 @@ import com.cbm.billing.exception.AccountNotFoundException;
 import com.cbm.billing.exception.ForbiddenOperationException;
 import com.cbm.billing.exception.ForbiddenTransactionExeption;
 import com.cbm.billing.service.IAccountService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -34,6 +37,11 @@ public class AccountController {
      * @return a {@link ResponseEntity} containing the created account, or an error response if the account could not be
      *     created
      */
+    @Operation(summary = "Create a new billing account")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Account created successfully"),
+            @ApiResponse(responseCode = "500", description = "Account creation failed")
+    })
     @PostMapping("/create")
     public ResponseEntity<CreateAccountResponse> create(@RequestBody @Valid CreateAccountDTO createAccountDTO) {
         CreateAccountResponse createAccountResponse = accountService.createAccount(createAccountDTO);
@@ -48,6 +56,12 @@ public class AccountController {
      *     response if the account could not be updated
      *     @throws AccountNotFoundException if the account with the given ID does not exist
      */
+    @Operation(summary = "Update the bill cycle for an account")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Account updated successfully"),
+            @ApiResponse(responseCode = "404", description = "Account not found"),
+            @ApiResponse(responseCode = "500", description = "Bill cycle update failed")
+    })
     @PutMapping("/update/{accountId}")
     public ResponseEntity<UpdateBillCycleResponse> updateBillCycle(@PathVariable Long accountId,
                                                                    @RequestBody @Valid UpdateBillCycleDTO updateBillCycleDTO)
@@ -67,6 +81,13 @@ public class AccountController {
      * @throws AccountNotFoundException if the account with the given ID does not exist
      * @throws ForbiddenTransactionExeption if the operation is "charge" and the account does not have enough balance
      */
+    @Operation(summary = "Perform a transaction on an account")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Transaction performed successfully"),
+        @ApiResponse(responseCode = "404", description = "Account not found"),
+        @ApiResponse(responseCode = "400", description = "Transaction not allowed"),
+        @ApiResponse(responseCode = "500", description = "Transaction failed")
+    })
     @PutMapping("transactions/{accountId}")
     public ResponseEntity<TransactionResponse> accountTransaction(@PathVariable Long accountId,
                                                                @RequestParam String operation,
@@ -89,6 +110,12 @@ public class AccountController {
      *     response if the account could not be found
      * @throws AccountNotFoundException if the account with the given ID does not exist
      */
+    @Operation(summary = "Retrieves an account by ID")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Account found"),
+            @ApiResponse(responseCode = "404", description = "Account not found"),
+            @ApiResponse(responseCode = "500", description = "Error finding account")
+    })
     @GetMapping("{accountId}")
     public ResponseEntity<QueryAccountResponse> findAccount(@PathVariable Long accountId) throws AccountNotFoundException {
         QueryAccountResponse queryAccountResponse = accountService.findAccountById(accountId);
@@ -108,6 +135,11 @@ public class AccountController {
      * @return a {@link ResponseEntity} containing the retrieved accounts, or an error
      *     response if no accounts match the criteria
      */
+    @Operation(summary = "Retrieves a list of accounts that match the given criteria")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Accounts found"),
+            @ApiResponse(responseCode = "500", description = "Error searching accounts")
+    })
     @GetMapping("/search")
     public ResponseEntity<SearchAccountResponse> searchAccount(@RequestParam(defaultValue = AccountConstants.DEFAULT_PAGE, required = false) int page,
                                                                @RequestParam(defaultValue = AccountConstants.PAGE_SIZE, required = false) int size,
@@ -140,6 +172,13 @@ public class AccountController {
      * @throws AccountNotFoundException if the account with the given ID does not exist
      * @throws ForbiddenOperationException if the account with the given ID is not active
      */
+    @Operation(summary = "Terminates the account with the given ID")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Account terminated"),
+            @ApiResponse(responseCode = "404", description = "Account not found"),
+            @ApiResponse(responseCode = "400", description = "Account is already terminated"),
+            @ApiResponse(responseCode = "500", description = "Error terminating account")
+    })
     @PutMapping("/inactivate/{accountId}")
     public ResponseEntity<UpdateAccountStatusResponse> inactivateAccount(@PathVariable Long accountId,
                                                                          @RequestBody @Valid UpdateAccountStatusDTO updateAccountStatusDTO)

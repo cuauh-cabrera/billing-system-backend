@@ -1,5 +1,26 @@
 ## Billing System API
-This is a billing backend Application that operates two DB schemas. One schema  contains all information about billing account and bill objects while the second schema contains all information about transactions.
+This is a billing backend application that provides a RESTful API for managing accounts and performing transactions. The API is designed to be scalable, secure, and easy to use.
+
+## Main Functionalities
+
+* Create Account: Create a new account with the given details.
+* Retrieve Account: Retrieve an account by ID
+* Search Accounts: Search for accounts based on various criteria (name, bill cycle day, last bill date, status).
+
+## Transaction Management
+
+* Perform Transaction: Perform a transaction on an account (charge or credit).
+
+## Features
+
+* Pagination: Search results are paginated for easier navigation.
+* Sorting: Search results can be sorted by various fields (name, bill cycle day, last bill date).
+* Advanced filtering: Search results can be filtered based on multiple criteria.
+* Error Handling: The API returns meaningful error responses for invalid requests or internal errors.
+
+## Documentation
+
+The API documentation is available at http:// localhost:{port}/swagger-ui.html
 
 ## Requirements
 
@@ -38,3 +59,6 @@ Clone the project from GitHub using the following commands:
 ```sh
   $ mvn clean install
 ```
+### Note: 
+
+This README provides a high-level overview of the project's features and functionalities. For more detailed information, please refer to the API documentation and code comments.
