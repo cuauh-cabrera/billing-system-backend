@@ -23,8 +23,8 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 
 @RestController
-@RequestMapping("/api/v1/accounts")
-@CrossOrigin("*")
+@RequestMapping(value = "/api/v1/accounts", produces = "application/json+vnd.spring-api-v1+json")
+@CrossOrigin(allowedHeaders = "*", origins = "*")
 public class AccountController {
     private final IAccountService accountService;
 
