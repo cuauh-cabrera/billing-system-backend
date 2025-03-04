@@ -20,12 +20,16 @@ This is a billing backend application that provides a RESTful API for managing a
 
 ## Documentation
 
-The API documentation is available at http:// localhost:{port}/swagger-ui.html
+The API documentation is available at: 
+
+```sh
+  $ https://cuauh-cabrera.github.io/billing-system-backend/
+```
 
 ## Requirements
 
-* Java 21
-* Spring Boot 3.3.4
+* Java 17
+* Spring Boot 3.3.x
 * Maven
 * MySQL 8.0 or higher
 
